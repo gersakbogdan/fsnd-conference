@@ -24,6 +24,14 @@ class SetAnnouncementHandler(webapp2.RequestHandler):
         self.response.set_status(204)
 
 
+class SetFeaturedSpeakerHandler(webapp2.RequestHandler):
+    def post(self):
+        """Set Featured Speaker in Memcache."""
+        ConferenceApi._cacheFeaturedSpeaker(
+            websafeConferenceKey=self.request.get('websafeConferenceKey'),
+            speaker=self.request.get('speaker')
+        )
+
 class SendConfirmationEmailHandler(webapp2.RequestHandler):
     def post(self):
         """Send email confirming Conference creation."""
@@ -38,7 +46,21 @@ class SendConfirmationEmailHandler(webapp2.RequestHandler):
         )
 
 
+class SendConfirmationSessionEmailHandler(webapp2.RequestHandler):
+    def post(self):
+        """Send email confirming Conference Session creation."""
+        mail.send_mail(
+            'noreply@%s.appspotmail.com' % (
+                app_identity.get_application_id()),     # from
+            self.request.get('email'),                  # to
+            'You created a new Session!',            # subj
+            'Hi, you have created a following '         # body
+            'session:\r\n\r\n%s' % self.request.get('sessionInfo')
+        )
+
 app = webapp2.WSGIApplication([
     ('/crons/set_announcement', SetAnnouncementHandler),
     ('/tasks/send_confirmation_email', SendConfirmationEmailHandler),
+    ('/tasks/send_confirmation_session_email', SendConfirmationSessionEmailHandler),
+    ('/tasks/set_featured_speaker', SetFeaturedSpeakerHandler)
 ], debug=True)
