@@ -14,6 +14,7 @@ __author__ = 'wesc+api@google.com (Wesley Chun)'
 
 
 from datetime import datetime
+from datetime import time
 
 import json
 
@@ -44,6 +45,8 @@ from models import SpeakerForms
 from models import Session
 from models import SessionForm
 from models import SessionForms
+from models import QueryForm
+from models import QueryForms
 
 from settings import WEB_CLIENT_ID
 from settings import ANDROID_CLIENT_ID
@@ -68,21 +71,29 @@ DEFAULTS = {
 }
 
 OPERATORS = {
-            'EQ':   '=',
-            'GT':   '>',
-            'GTEQ': '>=',
-            'LT':   '<',
-            'LTEQ': '<=',
-            'NE':   '!='
-            }
+    'EQ':   '=',
+    'GT':   '>',
+    'GTEQ': '>=',
+    'LT':   '<',
+    'LTEQ': '<=',
+    'NE':   '!='
+}
 
 FIELDS =    {
-            'CITY': 'city',
-            'TOPIC': 'topics',
-            'MONTH': 'month',
-            'MAX_ATTENDEES': 'maxAttendees',
-            }
+    'CITY': 'city',
+    'TOPIC': 'topics',
+    'MONTH': 'month',
+    'MAX_ATTENDEES': 'maxAttendees'
+}
 
+SESSION_FIELDS = {
+    'NAME': 'name',
+    'SPEAKER': 'speaker',
+    'DURATION': 'duration',
+    'TYPE_OF_SESSION': 'typeOfSession',
+    #'DATE': 'date',
+    #'START_TIME': 'startTime'
+}
 CONF_GET_REQUEST = endpoints.ResourceContainer(
     message_types.VoidMessage,
     websafeConferenceKey=messages.StringField(1),
@@ -231,7 +242,7 @@ class ConferenceApi(remote.Service):
                 # write to Conference object
                 setattr(conf, field.name, data)
         conf.put()
-        prof = ndb.Key(Profile, user_id).get()
+        prof = self._getProfileFromUser()
         return self._copyConferenceToForm(conf, getattr(prof, 'displayName'))
 
 
@@ -278,7 +289,7 @@ class ConferenceApi(remote.Service):
 
         # create ancestor query for all key matches for this user
         confs = Conference.query(ancestor=ndb.Key(Profile, user_id))
-        prof = ndb.Key(Profile, user_id).get()
+        prof = self._getProfileFromUser()
         # return set of ConferenceForm objects per Conference
         return ConferenceForms(
             items=[self._copyConferenceToForm(conf, getattr(prof, 'displayName')) for conf in confs]
@@ -288,7 +299,7 @@ class ConferenceApi(remote.Service):
     def _getQuery(self, request):
         """Return formatted query from the submitted filters."""
         q = Conference.query()
-        inequality_filter, filters = self._formatFilters(request.filters)
+        inequality_filter, filters = self._formatFilters(request.filters, FIELDS)
 
         # If exists, sort on inequality filter first
         if not inequality_filter:
@@ -305,7 +316,7 @@ class ConferenceApi(remote.Service):
         return q
 
 
-    def _formatFilters(self, filters):
+    def _formatFilters(self, filters, fields):
         """Parse, check validity and format user supplied filters."""
         formatted_filters = []
         inequality_field = None
@@ -314,7 +325,7 @@ class ConferenceApi(remote.Service):
             filtr = {field.name: getattr(f, field.name) for field in f.all_fields()}
 
             try:
-                filtr["field"] = FIELDS[filtr["field"]]
+                filtr["field"] = fields[filtr["field"]]
                 filtr["operator"] = OPERATORS[filtr["operator"]]
             except KeyError:
                 raise endpoints.BadRequestException("Filter contains invalid field or operator.")
@@ -360,7 +371,7 @@ class ConferenceApi(remote.Service):
 
 # - - - Speaker objects - - - - - - - - - - - - - - - - -
 
-    def _copySpeakerToForm(self, speaker, sessions):
+    def _copySpeakerToForm(self, speaker, sessions=None):
         """Copy relevant fields from Speaker to SpeakerForm."""
         sf = SpeakerForm()
         for field in sf.all_fields():
@@ -390,6 +401,7 @@ class ConferenceApi(remote.Service):
             for field in request.all_fields()
         }
         del data['websafeKey']
+        del data['sessions']
 
         # generate Speaker Key
         s_id = Speaker.allocate_ids(size=1)[0]
@@ -617,6 +629,61 @@ class ConferenceApi(remote.Service):
                 self._copySessionToForm(s) for s in sessions if s is not None
             ]
         )
+
+    @endpoints.method(message_types.VoidMessage, SessionForms,
+            path='workshops-before-19',
+            http_method='GET', name='getBefore19Workshops')
+    def getBefore19Workshops(self, request):
+        """Get list of workshop sessions which starts after 19 ."""
+
+        # filter by start time
+        sessions = Session.query(Session.startTime <= time(hour=19))
+        # filter result by session type
+        sessions = [s for s in sessions if s.typeOfSession != 'workshop']
+        # return set of SessionForm objects per Session
+        return SessionForms(
+            items=[self._copySessionToForm(session) for session in sessions]
+        )
+
+    def _getSessionsQuery(self, request):
+        """Return formatted query from the submitted filters."""
+        q = Session.query()
+        inequality_filter, filters = self._formatFilters(request.filters, SESSION_FIELDS)
+
+        # If exists, sort on inequality filter first
+        if not inequality_filter:
+            q = q.order(Session.name)
+        else:
+            q = q.order(ndb.GenericProperty(inequality_filter))
+            q = q.order(Session.name)
+
+        for filtr in filters:
+            if filtr["field"] == "duration":
+                filtr["value"] = int(filtr["value"])
+            #elif filtr["field"] == "startTime":
+            #    filtr["value"] = time(hour=int(filtr["value"]))
+            #elif filtr["field"] == "date":
+            #    filtr["value"] = datetime.strptime(filtr["value"][:10], "%Y-%m-%d").date()
+
+            formatted_query = ndb.query.FilterNode(
+                filtr["field"], filtr["operator"], filtr["value"]
+            )
+            q = q.filter(formatted_query)
+        return q
+
+    @endpoints.method(QueryForms, SessionForms,
+            path='querySessions',
+            http_method='POST',
+            name='querySessions')
+    def querySessions(self, request):
+        """Query for sessions."""
+        sessions = self._getSessionsQuery(request)
+
+        # return individual SessionForm object per Session
+        return SessionForms(
+                items=[self._copySessionToForm(s) for s in sessions]
+        )
+
 
 # - - - Featured Speaker - - - - - - - - - - - - - - - - - - - -
 
