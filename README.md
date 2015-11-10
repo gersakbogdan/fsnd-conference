@@ -1,5 +1,5 @@
 ## Udacity FSND -  P4 Conference Organization App
-Udacity Full Stack Web Developer Nanodegree P4 Conference Organization App Project
+Udacity Full Stack Web Developer Nanodegree [P4 Conference Organization App Project][7]
 
 ### Setup Instructions
 1. Update the value of `application` in `app.yaml` to the app ID you
@@ -15,8 +15,8 @@ Udacity Full Stack Web Developer Nanodegree P4 Conference Organization App Proje
 1. (Optional) Generate your client library(ies) with [the endpoints tool][6].
 1. Deploy your application.
 
-### Access
-1. [Api Explorer](https://aqueous-argon-867.appspot.com/_ah/api/explorer)
+### How to access app
+1. [API Explorer](https://aqueous-argon-867.appspot.com/_ah/api/explorer)
 
 ### Implementation Details
 
@@ -26,6 +26,19 @@ Udacity Full Stack Web Developer Nanodegree P4 Conference Organization App Proje
     * **getConferenceSessionsByType(websafeConferenceKey, typeOfSession)** Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)
     * **getSessionsBySpeaker(speaker)** -- Given a speaker, return all sessions given by this particular speaker, across all conferences
     * **createSession(SessionForm, websafeConferenceKey)** -- open only to the organizer of the conference
+
+* Speaker model:
+    * name (StringProperty, required)
+    * about (StringProperty)
+
+* Session model:
+    * name (StringProperty, required)
+    * highlights (StringProperty
+    * speaker (StringProperty, required)
+    * duration (IntegerProperty)
+    * typeOfSession (StringProperty)
+    * date (DateProperty)
+    * startTime (TimeProperty
 
 ### Resources
 * **Udacity course**
