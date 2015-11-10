@@ -1,15 +1,7 @@
-App Engine application for the Udacity training course.
+## Udacity FSND -  P4 Conference Organization App
+Udacity Full Stack Web Developer Nanodegree P4 Conference Organization App Project
 
-## Products
-- [App Engine][1]
-
-## Language
-- [Python][2]
-
-## APIs
-- [Google Cloud Endpoints][3]
-
-## Setup Instructions
+### Setup Instructions
 1. Update the value of `application` in `app.yaml` to the app ID you
    have registered in the App Engine admin console and would like to use to host
    your instance of this sample.
@@ -21,12 +13,16 @@ App Engine application for the Udacity training course.
    `$ git update-index --assume-unchanged app.yaml settings.py static/js/app.js`
 1. Run the app with the devserver using `dev_appserver.py DIR`, and ensure it's running by visiting your local server's address (by default [localhost:8080][5].)
 1. (Optional) Generate your client library(ies) with [the endpoints tool][6].
-1. Deploy your application.
+1. [Deploy your application][7].
 
 
-[1]: https://developers.google.com/appengine
-[2]: http://python.org
-[3]: https://developers.google.com/appengine/docs/python/endpoints/
+### Other Resources
+* **Udacity course**
+    * [Developing Scalable Apps in Python](https://www.udacity.com/course/developing-scalable-apps-in-python--ud858)
+* Google Cloud Platform
+    * [Google App Engine](https://developers.google.com/appengine)
+    * [Google Cloud Endpoints](https://developers.google.com/appengine/docs/python/endpoints/)
+    * [Google Developer Console](https://console.developers.google.com/)
 [4]: https://console.developers.google.com/
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
