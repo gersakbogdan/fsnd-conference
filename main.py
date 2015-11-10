@@ -10,12 +10,13 @@ created by wesc on 2014 may 24
 
 """
 
-__author__ = 'wesc+api@google.com (Wesley Chun)'
-
 import webapp2
 from google.appengine.api import app_identity
 from google.appengine.api import mail
 from conference import ConferenceApi
+
+__author__ = 'wesc+api@google.com (Wesley Chun)'
+
 
 class SetAnnouncementHandler(webapp2.RequestHandler):
     def get(self):
@@ -31,6 +32,7 @@ class SetFeaturedSpeakerHandler(webapp2.RequestHandler):
             websafeConferenceKey=self.request.get('websafeConferenceKey'),
             speaker=self.request.get('speaker')
         )
+
 
 class SendConfirmationEmailHandler(webapp2.RequestHandler):
     def post(self):
@@ -61,6 +63,7 @@ class SendConfirmationSessionEmailHandler(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/crons/set_announcement', SetAnnouncementHandler),
     ('/tasks/send_confirmation_email', SendConfirmationEmailHandler),
-    ('/tasks/send_confirmation_session_email', SendConfirmationSessionEmailHandler),
+    ('/tasks/send_confirmation_session_email',
+        SendConfirmationSessionEmailHandler),
     ('/tasks/set_featured_speaker', SetFeaturedSpeakerHandler)
 ], debug=True)
