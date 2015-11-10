@@ -19,12 +19,12 @@ Udacity Full Stack Web Developer Nanodegree P4 Conference Organization App Proje
 1. [Api Explorer](https://aqueous-argon-867.appspot.com/_ah/api/explorer)
 
 ### Implementation Details
-    * Add Sessions to Conference
-        * Enpoints implemented:
-            * getConferenceSessions(websafeConferenceKey) -- Given a conference, return all sessions
-            * getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)
-            * getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
-            * createSession(SessionForm, websafeConferenceKey) -- open only to the organizer of the conference
+* Add Sessions to Conference
+    * Enpoints implemented:
+        * getConferenceSessions(websafeConferenceKey) -- Given a conference, return all sessions
+        * getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)
+        * getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
+        * createSession(SessionForm, websafeConferenceKey) -- open only to the organizer of the conference
 
 ### Resources
 * **Udacity course**
