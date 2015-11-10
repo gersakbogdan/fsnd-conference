@@ -27,18 +27,24 @@ Udacity Full Stack Web Developer Nanodegree [P4 Conference Organization App Proj
     * **getSessionsBySpeaker(speaker)** -- Given a speaker, return all sessions given by this particular speaker, across all conferences
     * **createSession(SessionForm, websafeConferenceKey)** -- open only to the organizer of the conference
 
-* Speaker model:
-    * name (StringProperty, required)
-    * about (StringProperty)
-
 * Session model:
     * name (StringProperty, required)
-    * highlights (StringProperty
+    * highlights (StringProperty)
     * speaker (StringProperty, required)
     * duration (IntegerProperty)
     * typeOfSession (StringProperty)
     * date (DateProperty)
-    * startTime (TimeProperty
+    * startTime (TimeProperty)
+
+Basically all Session model field are required but sometimes at the beginning you don't have any information about a session
+so I decided to set as required only the name and the speaker fields. As an improve default values can be set.
+
+* Speaker model:
+    * name (StringProperty, required)
+    * about (StringProperty)
+
+By using a model for the Speaker we have the opportunity to add more interesting features to the app later, like:
+How many speakers we have, Which are the most popular, How long usually their session takes, etc.
 
 ### Resources
 * **Udacity course**
