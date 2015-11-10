@@ -37,7 +37,8 @@ Udacity Full Stack Web Developer Nanodegree [P4 Conference Organization App Proj
     * startTime (TimeProperty)
 
 Basically all Session model field are required but sometimes at the beginning you don't have any information about a session
-so I decided to set as required only the name and the speaker fields. As an improve default values can be set.
+so I decided to set as required only the name and the speaker fields. As an improvement default values can be set.
+Here the speaker field represents the Speaker websafeKey and not the name.
 
 * Speaker model:
     * name (StringProperty, required)
@@ -45,6 +46,17 @@ so I decided to set as required only the name and the speaker fields. As an impr
 
 By using a model for the Speaker we have the opportunity to add more interesting features to the app later, like:
 How many speakers we have, Which are the most popular, How long usually their session takes, etc.
+
+#### Work on indexes and queries
+* Endpoints:
+    * **querySessions()** -- Filter sessions by name, speaker, duration or type of session
+
+Using a generate query/filter method requires new indexes on Session. Check index.yaml for the list of indexes used.
+This filter will give you for example the opportunity to get only the sessions of type workshop, which takes more than 5 mins and where the speaker
+is one of your favourites.
+Take note that only one inequality filter for multiple properties can be used.
+"Limitations: The Datastore enforces some restrictions on queries. Violating these will cause it to raise exceptions. For example, combining too many filters, using inequalities for multiple properties, or combining an inequality with a sort order on a different property are all currently disallowed." ([read more][8])
+One option to avoid this limitation is to apply only one inequality filter in the query and all the others in the code. Check "getBefore19Workshops" for an example.
 
 ### Resources
 * **Udacity course**
@@ -58,3 +70,4 @@ How many speakers we have, Which are the most popular, How long usually their se
 [5]: https://localhost:8080/
 [6]: https://developers.google.com/appengine/docs/python/endpoints/endpoints_tool
 [7]: https://aqueous-argon-867.appspot.com
+[8]: https://cloud.google.com/appengine/docs/python/ndb/queries
