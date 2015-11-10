@@ -15,7 +15,7 @@ Udacity Full Stack Web Developer Nanodegree [P4 Conference Organization App Proj
 1. (Optional) Generate your client library(ies) with [the endpoints tool][6].
 1. Deploy your application.
 
-### How to access app
+### Access this repository
 1. [API Explorer](https://aqueous-argon-867.appspot.com/_ah/api/explorer)
 
 ### Implementation Details
@@ -51,11 +51,13 @@ How many speakers we have, Which are the most popular, How long usually their se
 * Endpoints:
     * **querySessions()** -- Filter sessions by name, speaker, duration or type of session
 
-Using a generate query/filter method requires new indexes on Session. Check index.yaml for the list of indexes used.
-This filter will give you for example the opportunity to get only the sessions of type workshop, which takes more than 5 mins and where the speaker
-is one of your favourites.
-Take note that only one inequality filter for multiple properties can be used.
+Using a general query/filter method requires new indexes on Session. Check index.yaml for the list of indexes used.
+
+This filter will give you for example the opportunity to get only the sessions of type workshop, which takes more than 5 mins and where the speaker is one of your favourites.
+
+Take note that only one inequality filter for multiple properties can be used:
 "Limitations: The Datastore enforces some restrictions on queries. Violating these will cause it to raise exceptions. For example, combining too many filters, using inequalities for multiple properties, or combining an inequality with a sort order on a different property are all currently disallowed." ([read more][8])
+
 One option to avoid this limitation is to apply only one inequality filter in the query and all the others in the code. Check "getBefore19Workshops" for an example.
 
 ### Resources
