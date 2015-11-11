@@ -24,6 +24,8 @@ from protorpc import remote
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
+from google.appengine.ext import db
+from google.net.proto.ProtocolBuffer import ProtocolBufferDecodeError
 
 from models import ConflictException
 from models import Profile
@@ -88,7 +90,7 @@ FIELDS = {
 
 SESSION_FIELDS = {
     'NAME': 'name',
-    'SPEAKER': 'speaker',
+    'SPEAKER': 'websafeSpeakerKey',
     'DURATION': 'duration',
     'TYPE_OF_SESSION': 'typeOfSession',
     # 'DATE': 'date',
@@ -232,7 +234,14 @@ class ConferenceApi(remote.Service):
         }
 
         # update existing conference
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        try:
+            conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeConferenceKey seems to be invalid')
         # check that conference exists
         if not conf:
             raise endpoints.NotFoundException(
@@ -431,7 +440,6 @@ class ConferenceApi(remote.Service):
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
-        user_id = getUserId(user)
 
         if not request.name:
             raise endpoints.BadRequestException(
@@ -453,8 +461,7 @@ class ConferenceApi(remote.Service):
 
         # create Speaker & return (modified) SpeakerForm
         Speaker(**data).put()
-
-        return request
+        return self._copySpeakerToForm(s_key.get())
 
     @endpoints.method(
         SpeakerForm,
@@ -496,6 +503,8 @@ class ConferenceApi(remote.Service):
                     setattr(sf, field.name, getattr(session, field.name))
             elif field.name == "websafeKey":
                 setattr(sf, field.name, session.key.urlsafe())
+            elif field.name == "websafeSpeakerKey":
+                setattr(sf, field.name, session.speakerKey.urlsafe())
         sf.check_initialized()
         return sf
 
@@ -516,18 +525,34 @@ class ConferenceApi(remote.Service):
             raise endpoints.BadRequestException(
                 "Session 'websafeConferenceKey' field required "
             )
+
+        try:
+            c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeConferenceKey seems to be invalid')
         # check that conference exists
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        conf = c_key.get()
         if not conf:
             raise endpoints.NotFoundException(
                 'No conference found with: %s' % request.websafeConferenceKey)
 
         # check if speaker entity exists
-        sp_key = ndb.Key(urlsafe=request.speaker)
+        try:
+            sp_key = ndb.Key(urlsafe=request.websafeSpeakerKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeSpeakerKey seems to be invalid')
         speaker = sp_key.get()
         if not speaker:
             raise endpoints.NotFoundException(
-                'No speaker found with key: %s' % request.speaker)
+                'No speaker found with key: %s' % request.websafeSpeakerKey)
 
         # check that user is owner
         if user_id != conf.organizerUserId:
@@ -541,6 +566,7 @@ class ConferenceApi(remote.Service):
         }
         del data['websafeKey']
         del data['websafeConferenceKey']
+        del data['websafeSpeakerKey']
 
         # convert dates from strings to Date objects;
         # set month based on start_date
@@ -555,8 +581,10 @@ class ConferenceApi(remote.Service):
                 data['startTime'][:5], "%H:%M"
             ).time()
 
+        # set speaker key
+        data['speakerKey'] = sp_key
+
         # generate Session Key based on Conference
-        c_key = ndb.Key(Conference, conf.key.id())
         s_id = Session.allocate_ids(size=1, parent=c_key)[0]
         s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
@@ -576,11 +604,11 @@ class ConferenceApi(remote.Service):
         taskqueue.add(
             params={
                 'websafeConferenceKey': request.websafeConferenceKey,
-                'speaker': request.speaker
+                'websafeSpeakerKey': request.websafeSpeakerKey
             },
             url='/tasks/set_featured_speaker'
         )
-        return self._copySessionToForm(request)
+        return self._copySessionToForm(s_key.get())
 
     @endpoints.method(
         SESSION_POST_REQUEST,
@@ -602,13 +630,21 @@ class ConferenceApi(remote.Service):
         """Get list of conference sessions."""
 
         # check for existing conference
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        try:
+            c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeConferenceKey seems to be invalid')
+        conf = c_key.get()
         if not conf:
             raise endpoints.NotFoundException(
                 'No conference found with: %s' % request.websafeConferenceKey)
 
         # create ancestor query for all key matches for this user
-        sessions = Session.query(ancestor=ndb.Key(Conference, conf.key.id()))
+        sessions = Session.query(ancestor=c_key)
         # return set of SessionForm objects per Session
         return SessionForms(
             items=[self._copySessionToForm(session) for session in sessions]
@@ -624,7 +660,16 @@ class ConferenceApi(remote.Service):
         """Get list of conference sessions filtered by type of session."""
 
         # check for existing conference
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        try:
+            c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeConferenceKey seems to be invalid')
+
+        conf = c_key.get()
         if not conf:
             raise endpoints.NotFoundException(
                 'No conference found with: %s' % request.websafeConferenceKey)
@@ -633,7 +678,7 @@ class ConferenceApi(remote.Service):
         # filter by type of session
         sessions = Session.query(
             Session.typeOfSession == request.typeOfSession,
-            ancestor=ndb.Key(Conference, conf.key.id())
+            ancestor=c_key
         )
 
         # return set of SessionForm objects per Session
@@ -651,7 +696,16 @@ class ConferenceApi(remote.Service):
         """Get list of conferences sessions filtered by speaker websafe key."""
 
         # filter by speaker
-        sessions = Session.query(Session.speaker == request.websafeSpeakerKey)
+        try:
+            s_key = ndb.Key(urlsafe=request.websafeSpeakerKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeSpeakerKey seems to be invalid')
+
+        sessions = Session.query(Session.speakerKey == s_key)
 
         # return set of SessionForm objects per Session
         return SessionForms(
@@ -671,34 +725,44 @@ class ConferenceApi(remote.Service):
 
         # check if session exists given sessionKey
         # get session; check that it exists
-        sk = request.sessionKey
-        session = ndb.Key(urlsafe=sk).get()
+        try:
+            s_key = ndb.Key(urlsafe=request.sessionKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'sessionKey seems to be invalid')
+        session = s_key.get()
         if not session:
             raise endpoints.NotFoundException(
-                'No session found with key: %s' % sk)
+                'No session found with key: %s' % request.sessionKey)
 
         # check if session already in wishlist
-        if sk in prof.sessionKeysWishList:
+        if s_key in prof.sessionKeysWishList:
             raise ConflictException(
                 "You have already add this session to your wishlist")
 
         # register user, take away one seat
-        prof.sessionKeysWishList.append(sk)
-        prof.put()
+        try:
+            prof.sessionKeysWishList.append(s_key)
+            prof.put()
+        except db.BadValueError:
+            raise endpoints.BadRequestException("Invalid Session key")
 
         return BooleanMessage(data=True)
 
     @endpoints.method(
         message_types.VoidMessage,
         SessionForms,
-        http_method='POST',
+        path='sessions/wishlist',
+        http_method='GET',
         name='getSessionsInWishlist')
     def getSessionsInWishlist(self, request):
         """Get user's sessions wishlist."""
 
         prof = self._getProfileFromUser()  # get user Profile
-        session_keys = [ndb.Key(urlsafe=sk) for sk in prof.sessionKeysWishList]
-        sessions = ndb.get_multi(session_keys)
+        sessions = ndb.get_multi(prof.sessionKeysWishList)
 
         # return set of SessionForm objects per Session
         return SessionForms(
@@ -710,11 +774,11 @@ class ConferenceApi(remote.Service):
     @endpoints.method(
         message_types.VoidMessage,
         SessionForms,
-        path='workshops-before-19',
+        path='non-workshops-before-19',
         http_method='GET',
-        name='getBefore19Workshops')
-    def getBefore19Workshops(self, request):
-        """Get list of workshop sessions which starts after 19 ."""
+        name='getBefore19NonWorkshops')
+    def getBefore19NonWorkshops(self, request):
+        """Get list of non-workshop sessions which starts before 19 ."""
 
         # filter by start time
         sessions = Session.query(Session.startTime <= time(hour=19))
@@ -742,11 +806,6 @@ class ConferenceApi(remote.Service):
         for filtr in filters:
             if filtr["field"] == "duration":
                 filtr["value"] = int(filtr["value"])
-            # elif filtr["field"] == "startTime":
-            #    filtr["value"] = time(hour=int(filtr["value"]))
-            # elif filtr["field"] == "date":
-            #    filtr["value"] = datetime.strptime(
-            #    filtr["value"][:10], "%Y-%m-%d").date()
 
             formatted_query = ndb.query.FilterNode(
                 filtr["field"], filtr["operator"], filtr["value"]
@@ -772,13 +831,21 @@ class ConferenceApi(remote.Service):
 # - - - Featured Speaker - - - - - - - - - - - - - - - - - - - -
 
     @staticmethod
-    def _cacheFeaturedSpeaker(websafeConferenceKey, speaker):
+    def _cacheFeaturedSpeaker(websafeConferenceKey, websafeSpeakerKey):
         """Create Featured Speaker & assign to memcache;"""
 
         featured_speaker = ""
 
         # retrieve conference
-        conf = ndb.Key(urlsafe=websafeConferenceKey).get()
+        try:
+            c_key = ndb.Key(urlsafe=websafeConferenceKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeConferenceKey seems to be invalid')
+        conf = c_key.get()
 
         # check that conference exists
         if not conf:
@@ -786,17 +853,23 @@ class ConferenceApi(remote.Service):
                 'No conference found with key: %s' % websafeConferenceKey)
 
         # set as featured speaker if speaker has at least 2 sessions
-        c_key = ndb.Key(Conference, conf.key.id())
-        sessions = Session.query(Session.speaker == speaker, ancestor=c_key)
+        try:
+            s_key = ndb.Key(urlsafe=websafeSpeakerKey)
+        except TypeError:
+            raise endpoints.BadRequestException(
+                'Only string is allowed as urlsafe input')
+        except ProtocolBufferDecodeError:
+            raise endpoints.BadRequestException(
+                'websafeSpeakerKey seems to be invalid')
+
+        sessions = Session.query(Session.speakerKey == s_key, ancestor=c_key)
 
         if len(list(sessions)) > 1:
             featured_speaker = {
-                'speaker': ndb.Key(urlsafe=speaker).get(),
+                'speaker': s_key.get(),
                 'sessions': [session.name for session in sessions]
             }
             memcache.set(MEMCACHE_FEATURED_SPEAKER_KEY, featured_speaker)
-
-        return featured_speaker
 
     @endpoints.method(
         message_types.VoidMessage,
@@ -1042,11 +1115,6 @@ class ConferenceApi(remote.Service):
     def filterPlayground(self, request):
         """Filter Playground"""
         q = Conference.query()
-        # field = "city"
-        # operator = "="
-        # value = "London"
-        # f = ndb.query.FilterNode(field, operator, value)
-        # q = q.filter(f)
         q = q.filter(Conference.city == "London")
         q = q.filter(Conference.topics == "Medical Innovations")
         q = q.filter(Conference.month == 6)
