@@ -50,10 +50,9 @@ Basically all Session model fields needs to be required but sometimes at the beg
     * name (StringProperty, required)
     * about (StringProperty)
 
-* Additional endpoints for Session and Speaker model:
+* Additional endpoints for Speaker model:
     * **createSpeaker(SpeakerForm)** -- Register a new speaker
     * **getSpeakers()** -- Get list of speakers
-    * **querySessions** -- Query for Sessions on a list of fields: name, speaker, duration, type of session
 
 By using a model for the Speaker we have the opportunity to add more interesting features to the app later, like:
 How many speakers we have, Which are the most popular, How long usually their session takes, etc.
