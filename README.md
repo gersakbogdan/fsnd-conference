@@ -37,11 +37,13 @@ Udacity Full Stack Web Developer Nanodegree [P4 Conference Organization App Proj
     * startTime (TimeProperty)
 
 
-Since a session can not exists by itself every Session is stored as a child of a Conference (ancestor).
-A Session can have only one Speaker and the relation is stored into 'speakerKey' which is restricted only to keys of kind = Speaker.
+Each Session is stored as a child of a Conference (ancestor). A Session can have only one Speaker and the relation is stored into 'speakerKey' which is restricted only to keys of kind = Speaker.
+
 Session duration is stored as minutes using an integer property. Using an integer field we can easily apply comparation filters (>, <, >=, etc.) and also using python date and time specific functions (e.g: timedelta) we can easily find the end of a session by adding this value to the start time of the session.
+
 For date and startTime DateTimeProperty were used. Input format for date is: "%Y-%m-%d" and for start time: "%H:%M".
 Having startTime as TimeProperty gives us the possibility to extract those sessions which start before or after a specific hour or minute.
+
 Basically all Session model fields needs to be required but sometimes at the beginning you don't have any information about a session
 so I decided to set as required only the name and the speaker fields. As an improvement default values can be set.
 Setting the 'speakerKey' property as KeyProperty of kind Speaker will ensure that we can't insert incorrect values
