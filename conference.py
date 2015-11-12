@@ -1012,7 +1012,7 @@ class ConferenceApi(remote.Service):
 
         # check if conf exists given websafeConfKey
         # get conference; check that it exists
-        wsck = request.websafeConferenceKeyf
+        wsck = request.websafeConferenceKey
         conf = ndb.Key(urlsafe=wsck).get()
         if not conf:
             raise endpoints.NotFoundException(
